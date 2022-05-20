@@ -503,9 +503,9 @@ func main() {
 		Items: []*widget.FormItem{
 			widget.NewFormItem("Endpoint", endpoint),
 			widget.NewFormItem("Region", region),
-			widget.NewFormItem("Bucket", sc.bucketEntry),
 			widget.NewFormItem("AccessKey", user),
 			widget.NewFormItem("SecretKey", pass),
+			widget.NewFormItem("Bucket", sc.bucketEntry),
 		},
 		SubmitText: "Enter",
 		OnSubmit: func() {
