@@ -1,0 +1,232 @@
+package main
+
+import (
+	"context"
+	"crypto/tls"
+	"io"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	listDelimiter = "/"
+)
+
+var transport http.RoundTripper = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	Dial: (&net.Dialer{
+		Timeout:   15 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).Dial,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 0,
+	MaxIdleConnsPerHost:   512,
+	MaxIdleConns:          1024,
+	IdleConnTimeout:       5 * time.Minute,
+	TLSClientConfig: &tls.Config{
+		InsecureSkipVerify: true,
+	},
+}
+
+type Client struct {
+	Bucket string
+	Prefix string
+	c      *s3.Client
+}
+
+func NewClientWithBucket(bucket, prefix, accessKey, secretKey, region, endpoint string) *Client {
+	c := NewClient(accessKey, secretKey, region, endpoint)
+	c.Bucket = bucket
+	c.Prefix = prefix
+	return c
+}
+
+func NewClient(accessKey, secretKey, region, endpoint string) *Client {
+	awsConfig := aws.Config{
+		Region:        region,
+		ClientLogMode: 0,
+		HTTPClient: &http.Client{
+			Transport: transport,
+		},
+		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, region string, opts ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL:           endpoint,
+				SigningName:   "s3",
+				SigningRegion: region,
+			}, nil
+		}),
+		Retryer: func() aws.Retryer {
+			return aws.NopRetryer{}
+		},
+	}
+
+	if accessKey == "" && secretKey == "" {
+		awsConfig.Credentials = aws.AnonymousCredentials{}
+	} else {
+		awsConfig.Credentials = aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+			return aws.Credentials{
+				AccessKeyID:     accessKey,
+				SecretAccessKey: secretKey,
+			}, nil
+		})
+	}
+
+	client := s3.NewFromConfig(awsConfig, func(opts *s3.Options) {
+		opts.UsePathStyle = true
+	})
+
+	return &Client{
+		c: client,
+	}
+}
+
+func (c *Client) ListBuckets(ctx context.Context) (data []string, err error) {
+	log.WithFields(log.Fields{}).Debug("s3 list buckets")
+
+	s3out, err := c.c.ListBuckets(ctx, &s3.ListBucketsInput{})
+	if err != nil {
+		return
+	}
+
+	data = make([]string, len(s3out.Buckets))
+	for i, v := range s3out.Buckets {
+		data[i] = *v.Name
+	}
+
+	return
+}
+
+func (c *Client) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
+	log.WithFields(log.Fields{
+		"marker": marker,
+		"prefix": prefix,
+	}).Debug("s3 list")
+	loi := &s3.ListObjectsInput{
+		Bucket:    aws.String(c.Bucket),
+		Delimiter: aws.String(listDelimiter),
+	}
+	prefix = c.Prefix + prefix
+	if prefix != "" {
+		loi.Prefix = aws.String(prefix)
+	}
+	if marker != "" {
+		loi.Marker = aws.String(marker)
+	}
+	if prefix != "" {
+		loi.Prefix = aws.String(prefix)
+	}
+
+	s3out, err := c.c.ListObjects(ctx, loi)
+	if err != nil {
+		return
+	}
+
+	lp := len(s3out.CommonPrefixes)
+	lc := len(s3out.Contents)
+	data = make([]File, lp+lc)
+	for i, v := range s3out.CommonPrefixes {
+		f := File{
+			Name: *v.Prefix,
+			Type: FileDir,
+		}
+		if prefix != "" {
+			f.Name = strings.TrimPrefix(f.Name, prefix)
+		}
+		data[i] = f
+	}
+	for i, v := range s3out.Contents {
+		f := File{
+			Name: *v.Key,
+			Time: *v.LastModified,
+			Size: v.Size,
+		}
+		if prefix != "" {
+			f.Name = strings.TrimPrefix(f.Name, prefix)
+		}
+		data[lp+i] = f
+	}
+	if s3out.IsTruncated {
+		if s3out.NextMarker != nil && *s3out.NextMarker != "" {
+			nextMarker = *s3out.NextMarker
+		} else {
+			nextMarker = prefix + data[lp+lc-1].Name
+		}
+	}
+
+	return
+}
+
+func (c *Client) Upload(ctx context.Context, rs io.ReadSeeker, key, contentType string) (err error) {
+	if c.Prefix != "" {
+		key = c.Prefix + key
+	}
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(key),
+		Body:   rs,
+	}
+	if contentType != "" {
+		input.ContentType = aws.String(contentType)
+	}
+
+	_, err = c.c.PutObject(ctx, input, s3.WithAPIOptions(
+		v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware,
+	))
+
+	return
+}
+
+func (c *Client) Download(ctx context.Context, w io.Writer, key string) (err error) {
+	if c.Prefix != "" {
+		key = c.Prefix + key
+	}
+	resp, err := c.c.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	_, err = io.Copy(w, resp.Body)
+
+	return
+}
+
+func (c *Client) Delete(ctx context.Context, key string) (err error) {
+	if c.Prefix != "" {
+		key = c.Prefix + key
+	}
+	_, err = c.c.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(key),
+	})
+
+	return
+}
+
+func (c *Client) Head(ctx context.Context, key string) (f File, err error) {
+	if c.Prefix != "" {
+		key = c.Prefix + key
+	}
+	resp, err := c.c.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return
+	}
+	f.Name = key
+	f.Size = resp.ContentLength
+	f.ContentType = *resp.ContentType
+	f.Time = *resp.LastModified
+
+	return
+}
