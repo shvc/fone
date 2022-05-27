@@ -77,20 +77,20 @@ func NewClient(accessKey, secretKey, region, endpoint string) *S3Client {
 	})
 
 	return &S3Client{
-		c: client,
+		Client: client,
 	}
 }
 
 type S3Client struct {
 	Bucket string
 	Prefix string
-	c      *s3.Client
+	*s3.Client
 }
 
-func (c *S3Client) ListBuckets(ctx context.Context) (data []string, err error) {
+func (c *S3Client) ListAllMyBuckets(ctx context.Context) (data []string, err error) {
 	log.WithFields(log.Fields{}).Debug("s3 list buckets")
 
-	s3out, err := c.c.ListBuckets(ctx, &s3.ListBucketsInput{})
+	s3out, err := c.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		return
 	}
@@ -123,7 +123,7 @@ func (c *S3Client) List(ctx context.Context, prefix, marker string) (data []File
 		loi.Prefix = aws.String(prefix)
 	}
 
-	s3out, err := c.c.ListObjects(ctx, loi)
+	s3out, err := c.ListObjects(ctx, loi)
 	if err != nil {
 		return
 	}
@@ -176,7 +176,7 @@ func (c *S3Client) Upload(ctx context.Context, rs io.ReadSeeker, key, contentTyp
 		input.ContentType = aws.String(contentType)
 	}
 
-	_, err = c.c.PutObject(ctx, input, s3.WithAPIOptions(
+	_, err = c.PutObject(ctx, input, s3.WithAPIOptions(
 		v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware,
 	))
 
@@ -187,7 +187,7 @@ func (c *S3Client) Download(ctx context.Context, w io.Writer, key string) (err e
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
-	resp, err := c.c.GetObject(ctx, &s3.GetObjectInput{
+	resp, err := c.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(c.Bucket),
 		Key:    aws.String(key),
 	})
@@ -204,7 +204,7 @@ func (c *S3Client) Delete(ctx context.Context, key string) (err error) {
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
-	_, err = c.c.DeleteObject(ctx, &s3.DeleteObjectInput{
+	_, err = c.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(c.Bucket),
 		Key:    aws.String(key),
 	})
@@ -216,7 +216,7 @@ func (c *S3Client) Stat(ctx context.Context, key string) (f File, err error) {
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
-	resp, err := c.c.HeadObject(ctx, &s3.HeadObjectInput{
+	resp, err := c.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(c.Bucket),
 		Key:    aws.String(key),
 	})

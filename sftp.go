@@ -42,14 +42,14 @@ func NewSftpClient(server, user, pass, dir string) (*SftpClient, error) {
 
 	return &SftpClient{
 		Dir:    h,
-		client: sftpClient,
+		Client: sftpClient,
 	}, nil
 
 }
 
 type SftpClient struct {
-	Dir    string
-	client *sftp.Client
+	Dir string
+	*sftp.Client
 }
 
 func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
@@ -60,7 +60,7 @@ func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []Fi
 	if prefix == "" {
 		prefix = c.Dir
 	}
-	fis, err := c.client.ReadDir(prefix)
+	fis, err := c.ReadDir(prefix)
 	if err != nil {
 		err = fmt.Errorf("readDir %s error %w", prefix, err)
 		return
@@ -86,7 +86,7 @@ func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []Fi
 }
 
 func (c *SftpClient) Upload(ctx context.Context, rs io.ReadSeeker, key, contentType string) (err error) {
-	f, err := c.client.Create(key)
+	f, err := c.Create(key)
 	if err != nil {
 		err = fmt.Errorf("create %s error %w", key, err)
 		return
@@ -96,7 +96,7 @@ func (c *SftpClient) Upload(ctx context.Context, rs io.ReadSeeker, key, contentT
 }
 
 func (c *SftpClient) Download(ctx context.Context, w io.Writer, key string) (err error) {
-	f, err := c.client.Open(key)
+	f, err := c.Open(key)
 	if err != nil {
 		err = fmt.Errorf("open %s error %w", key, err)
 		return err
@@ -106,11 +106,11 @@ func (c *SftpClient) Download(ctx context.Context, w io.Writer, key string) (err
 }
 
 func (c *SftpClient) Delete(ctx context.Context, key string) (err error) {
-	return c.client.Remove(key)
+	return c.Remove(key)
 }
 
 func (c *SftpClient) Stat(ctx context.Context, key string) (f File, err error) {
-	fi, err := c.client.Stat(key)
+	fi, err := c.Client.Stat(key)
 	if err != nil {
 		err = fmt.Errorf("stat %s error %w", key, err)
 		return
@@ -125,5 +125,5 @@ func (c *SftpClient) Stat(ctx context.Context, key string) (f File, err error) {
 }
 
 func (c *SftpClient) Close(ctx context.Context) error {
-	return c.client.Close()
+	return c.Client.Close()
 }

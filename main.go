@@ -537,7 +537,7 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 				sc.w.Resize(fyne.NewSize(800, 600))
 			} else {
 				client := NewClient(user.Text, pass.Text, region.Text, endpoint.Text)
-				data, err := client.ListBuckets(context.Background())
+				data, err := client.ListAllMyBuckets(context.Background())
 				if err != nil {
 					log.WithFields(log.Fields{
 						"endpoint": endpoint.Text,
