@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"net/url"
 	"os"
@@ -71,7 +70,6 @@ type Fone struct {
 	pathLabel     *widget.Label
 	infoLabel     *widget.Label
 	appTab        *container.AppTabs
-	bucketEntry   *widget.SelectEntry
 }
 
 func splitKeyValue(data, sep string) (string, string) {
@@ -158,13 +156,13 @@ func (sc *Fone) makeHeader() error {
 			dialog.NewCustom("About", "OK", widget.NewHyperlink(shvcFone, link), sc.w).Show()
 		}),
 		fyne.NewMenuItem("Exit", func() {
-			dialog.NewConfirm("Exit", "Exit current Bucket?", func(ok bool) {
+			dialog.NewConfirm("Exit", "Exit current Session?", func(ok bool) {
 				if ok {
 					sc.w.SetContent(sc.appTab)
 					sc.w.Resize(fyne.NewSize(600, 300))
 					log.WithFields(log.Fields{
-						"bucket": sc.bucketEntry.Text,
-					}).Info("exit bucket")
+						"pwd": "sc.bucketEntry.Text",
+					}).Info("exit session")
 				}
 			}, sc.w).Show()
 		}),
@@ -176,7 +174,7 @@ func (sc *Fone) makeHeader() error {
 	)
 
 	btnBackward := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-		if sc.pathLabel.Text == "" {
+		if sc.pathLabel.Text == "" || sc.pathLabel.Text == "/" {
 			sc.body.ScrollTo(0)
 			return
 		}
@@ -198,7 +196,9 @@ func (sc *Fone) makeHeader() error {
 			if prefix == "." {
 				prefix = ""
 			} else {
-				prefix = prefix + "/"
+				if !strings.HasSuffix(prefix, "/") {
+					prefix = prefix + "/"
+				}
 			}
 			data, nextMarker, err := sc.client.List(sc.refreshCtx, prefix, "")
 			if err != nil {
@@ -482,11 +482,13 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 	endpoint.Validator = validation.NewRegexp(`^(?:https?://)?(?:[^/.\s]+\.)*`, "not a valid endpoint address")
 	region := widget.NewEntryWithData(binding.BindPreferenceString("cred.s3_region", sc.a.Preferences()))
 	region.SetPlaceHolder("cn-north-1")
-	sc.bucketEntry = widget.NewSelectEntry(nil)
-	sc.bucketEntry.Bind(binding.BindPreferenceString("cred.s3_bucket", sc.a.Preferences()))
+	bucketEntry := widget.NewSelectEntry(nil)
+	bucketEntry.Bind(binding.BindPreferenceString("cred.s3_bucket", sc.a.Preferences()))
 	user := widget.NewEntryWithData(binding.BindPreferenceString("cred.s3_user", sc.a.Preferences()))
 	pass := widget.NewPasswordEntry()
 	pass.Bind(binding.BindPreferenceString("cred.s3_pass", sc.a.Preferences()))
+
+	sc.w.SetTitle("S3")
 
 	return &widget.Form{
 		Items: []*widget.FormItem{
@@ -494,20 +496,20 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 			widget.NewFormItem("Region", region),
 			widget.NewFormItem("AccessKey", user),
 			widget.NewFormItem("SecretKey", pass),
-			widget.NewFormItem("Bucket", sc.bucketEntry),
+			widget.NewFormItem("Bucket", bucketEntry),
 		},
 		SubmitText: "Enter",
 		OnSubmit: func() {
-			if sc.bucketEntry.Text != "" {
-				bucketName, keyPrefix := splitKeyValue(sc.bucketEntry.Text, "/")
-				sc.w.SetTitle(bucketName)
+			if bucketEntry.Text != "" {
+				bucketName, keyPrefix := splitKeyValue(bucketEntry.Text, "/")
+
 				sc.client = NewClientWithBucket(bucketName, keyPrefix, user.Text, pass.Text, region.Text, endpoint.Text)
 				sc.lockRefresh()
 				data, nextMarker, err := sc.client.List(context.Background(), "", "")
 				if err != nil {
 					log.WithFields(log.Fields{
 						"endpoint": endpoint.Text,
-						"bucket":   sc.bucketEntry.Text,
+						"bucket":   bucketEntry.Text,
 						"user":     user.Text,
 						"error":    err.Error(),
 					}).Warn("list file failed")
@@ -521,7 +523,7 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 				}
 				log.WithFields(log.Fields{
 					"endpoint": endpoint.Text,
-					"bucket":   sc.bucketEntry.Text,
+					"bucket":   bucketEntry.Text,
 					"user":     user.Text,
 				}).Info("list file success")
 
@@ -557,8 +559,8 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 					"user":     user.Text,
 				}).Info("list buckets success")
 				if len(data) > 0 {
-					sc.bucketEntry.SetOptions(data)
-					sc.bucketEntry.SetText(data[0])
+					bucketEntry.SetOptions(data)
+					bucketEntry.SetText(data[0])
 				}
 			}
 		},
@@ -569,10 +571,11 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 	server := widget.NewEntryWithData(binding.BindPreferenceString("cred.sftp_server", sc.a.Preferences()))
 	server.SetPlaceHolder("192.168.0.8:22")
 	remoteDir := widget.NewEntryWithData(binding.BindPreferenceString("cred.sftp_dir", sc.a.Preferences()))
-	remoteDir.SetPlaceHolder("/")
 	sftpUser := widget.NewEntryWithData(binding.BindPreferenceString("cred.sftp_user", sc.a.Preferences()))
 	sftpPassword := widget.NewPasswordEntry()
 	sftpPassword.Bind(binding.BindPreferenceString("cred.sftp_password", sc.a.Preferences()))
+
+	sc.w.SetTitle("sftp")
 
 	return &widget.Form{
 		Items: []*widget.FormItem{
@@ -583,28 +586,25 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 		},
 		SubmitText: "Enter",
 		OnSubmit: func() {
-			if remoteDir.Text == "" {
-				fmt.Printf("remoteDir.Text: %v\n", remoteDir.Text)
-				return
-			}
 			var err error
-			sc.w.SetTitle(remoteDir.Text)
-			sc.client, err = NewSftpClient(server.Text, sftpUser.Text, sftpPassword.Text, remoteDir.Text)
+			var pwd string
+			sc.client, pwd, err = NewSftpClient(server.Text, sftpUser.Text, sftpPassword.Text, remoteDir.Text)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"server": server.Text,
-					"dir":    remoteDir.Text,
+					"pwd":    pwd,
 					"user":   sftpUser.Text,
 					"error":  err.Error(),
 				}).Warn("init provider failed")
 				return
 			}
+
 			sc.lockRefresh()
-			data, nextMarker, err := sc.client.List(context.Background(), "", "")
+			data, nextMarker, err := sc.client.List(context.Background(), pwd, "")
 			if err != nil {
 				log.WithFields(log.Fields{
 					"server": server.Text,
-					"dir":    remoteDir.Text,
+					"pwd":    pwd,
 					"user":   sftpUser.Text,
 					"error":  err.Error(),
 				}).Warn("list file failed")
@@ -616,15 +616,20 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 				dialog.ShowError(e, sc.w)
 				return
 			}
+
 			log.WithFields(log.Fields{
 				"server": server.Text,
-				"dir":    remoteDir.Text,
+				"pwd":    pwd,
 				"user":   sftpUser.Text,
 			}).Info("list file success")
 
 			sc.makeHeader()
 			sc.initBody(data)
 			sc.makeFooter()
+			if !strings.HasSuffix(pwd, "/") {
+				pwd += "/"
+			}
+			sc.pathLabel.SetText(pwd)
 
 			sc.refreshCtx, sc.refreshCancel = context.WithCancel(context.Background())
 			sc.lockRefresh()
@@ -632,6 +637,121 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 
 			sc.w.SetContent(container.NewBorder(sc.header, sc.footer, nil, nil, sc.body))
 			sc.w.Resize(fyne.NewSize(800, 600))
+		},
+	}
+}
+
+func (sc *Fone) createMyshareLoginForm() *widget.Form {
+	server := widget.NewEntryWithData(binding.BindPreferenceString("cred.myshare_server", sc.a.Preferences()))
+	server.SetPlaceHolder("http://192.168.0.8:9090")
+	server.Validator = validation.NewRegexp(`^(?:https?://)?(?:[^/.\s]+\.)*`, "not a valid server address")
+	bucketEntry := widget.NewSelectEntry(nil)
+	bucketEntry.Bind(binding.BindPreferenceString("cred.myshare_bucket", sc.a.Preferences()))
+	user := widget.NewEntryWithData(binding.BindPreferenceString("cred.myshare_user", sc.a.Preferences()))
+	pass := widget.NewPasswordEntry()
+	pass.Bind(binding.BindPreferenceString("cred.myshare_pass", sc.a.Preferences()))
+
+	sc.w.SetTitle("myshare")
+
+	return &widget.Form{
+		Items: []*widget.FormItem{
+			widget.NewFormItem("Server", server),
+			widget.NewFormItem("AccessKey", user),
+			widget.NewFormItem("SecretKey", pass),
+			widget.NewFormItem("Bucket", bucketEntry),
+		},
+		SubmitText: "Enter",
+		OnSubmit: func() {
+			if bucketEntry.Text != "" {
+				var err error
+				sc.client, _, err = NewMystorClient(server.Text, user.Text, pass.Text, bucketEntry.Text)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"endpoint": server.Text,
+						"user":     user.Text,
+						"error":    err.Error(),
+					}).Warn("create client failed")
+					var e error
+					for err != nil {
+						e = err
+						err = errors.Unwrap(err)
+					}
+					dialog.ShowError(e, sc.w)
+					return
+				}
+				sc.lockRefresh()
+				data, nextMarker, err := sc.client.List(context.Background(), "", "")
+				if err != nil {
+					log.WithFields(log.Fields{
+						"server": server.Text,
+						"bucket": bucketEntry.Text,
+						"user":   user.Text,
+						"error":  err.Error(),
+					}).Warn("list file failed")
+					var e error
+					for err != nil {
+						e = err
+						err = errors.Unwrap(err)
+					}
+					dialog.ShowError(e, sc.w)
+					return
+				}
+				log.WithFields(log.Fields{
+					"server": server.Text,
+					"bucket": bucketEntry.Text,
+					"user":   user.Text,
+				}).Info("list file success")
+
+				sc.makeHeader()
+				sc.initBody(data)
+				sc.makeFooter()
+
+				sc.refreshCtx, sc.refreshCancel = context.WithCancel(context.Background())
+				sc.lockRefresh()
+				sc.appendBody(sc.refreshCtx, "", nextMarker)
+
+				sc.w.SetContent(container.NewBorder(sc.header, sc.footer, nil, nil, sc.body))
+				sc.w.Resize(fyne.NewSize(800, 600))
+			} else {
+				client, _, err := NewMystorClient(server.Text, user.Text, pass.Text, bucketEntry.Text)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"endpoint": server.Text,
+						"user":     user.Text,
+						"error":    err.Error(),
+					}).Warn("create client failed")
+					var e error
+					for err != nil {
+						e = err
+						err = errors.Unwrap(err)
+					}
+					dialog.ShowError(e, sc.w)
+					return
+				}
+				data, err := client.ListAllMyBuckets(context.Background())
+				if err != nil {
+					log.WithFields(log.Fields{
+						"endpoint": server.Text,
+						"user":     user.Text,
+						"error":    err.Error(),
+					}).Warn("list buckets failed")
+					var e error
+					for err != nil {
+						e = err
+						err = errors.Unwrap(err)
+					}
+					dialog.ShowError(e, sc.w)
+					return
+				}
+				log.WithFields(log.Fields{
+					"server": server.Text,
+					"user":   user.Text,
+				}).Info("list buckets success")
+				if len(data) > 0 {
+					bucketEntry.SetOptions(data)
+					bucketEntry.SetText(data[0])
+				}
+			}
 		},
 	}
 }
@@ -653,19 +773,19 @@ func main() {
 	}
 	log.SetOutput(logfd)
 
-	sc := Fone{
+	fe := Fone{
 		a: app.NewWithID("cc.shvc.fone"),
 	}
-	sc.w = sc.a.NewWindow("fone")
+	fe.w = fe.a.NewWindow("fone")
 
-	sc.appTab = container.NewAppTabs(
-		container.NewTabItemWithIcon("S3", theme.FileIcon(), sc.createS3LoginForm()),
-		container.NewTabItemWithIcon("sftp", theme.FolderIcon(), sc.createSftpLoginForm()),
-		container.NewTabItemWithIcon("myshare", theme.DocumentIcon(), widget.NewLabel("myshare login page!")),
+	fe.appTab = container.NewAppTabs(
+		container.NewTabItemWithIcon("S3", theme.FileIcon(), fe.createS3LoginForm()),
+		container.NewTabItemWithIcon("sftp", theme.FolderIcon(), fe.createSftpLoginForm()),
+		container.NewTabItemWithIcon("myshare", theme.DocumentIcon(), fe.createMyshareLoginForm()),
 	)
 
-	sc.w.SetContent(sc.appTab)
-	sc.w.Resize(fyne.NewSize(600, 300))
-	sc.w.CenterOnScreen()
-	sc.w.ShowAndRun()
+	fe.w.SetContent(fe.appTab)
+	fe.w.Resize(fyne.NewSize(600, 300))
+	fe.w.CenterOnScreen()
+	fe.w.ShowAndRun()
 }

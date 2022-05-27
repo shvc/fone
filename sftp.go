@@ -5,50 +5,64 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/pkg/sftp"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
-func NewSftpClient(server, user, pass, dir string) (*SftpClient, error) {
+func NewSftpClient(server, user, pass, dir string) (*SftpClient, string, error) {
 	if !strings.HasSuffix(server, ":22") && !strings.Contains(server, ":") {
 		server = server + ":22"
 	}
-	sshConfig := &ssh.ClientConfig{
+
+	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(pass),
+			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+				// Just send the password back for all questions
+				answers := make([]string, len(questions))
+				for i := range answers {
+					answers[i] = pass
+				}
+				return answers, nil
+			}),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         10 * time.Second,
+		//HostKeyCallback: ssh.FixedHostKey(hostKey),
 	}
 
-	sshClient, err := ssh.Dial("tcp", server, sshConfig)
+	sshClient, err := ssh.Dial("tcp", server, config)
 	if err != nil {
-		return nil, err
+		return nil, "", fmt.Errorf("dial %s error %w", server, err)
 	}
 
 	sftpClient, err := sftp.NewClient(sshClient)
 	if err != nil {
-		return nil, err
+		return nil, "", fmt.Errorf("sftp %s error %w", server, err)
+	}
+	if dir == "" {
+		dir, err = sftpClient.Getwd()
+		if err != nil {
+			return nil, "", fmt.Errorf("getwd error %w", err)
+		}
 	}
 
-	h, err := sftpClient.Getwd()
+	pwd, err := sftpClient.RealPath(dir)
 	if err != nil {
-		return nil, err
+		return nil, "", fmt.Errorf("realpath %s error %w", dir, err)
 	}
 
 	return &SftpClient{
-		Dir:    h,
+		Pwd:    pwd,
 		Client: sftpClient,
-	}, nil
+	}, pwd, nil
 
 }
 
 type SftpClient struct {
-	Dir string
+	Pwd string
 	*sftp.Client
 }
 
@@ -58,7 +72,7 @@ func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []Fi
 		"prefix": prefix,
 	}).Debug("s3 list")
 	if prefix == "" {
-		prefix = c.Dir
+		prefix = c.Pwd
 	}
 	fis, err := c.ReadDir(prefix)
 	if err != nil {
@@ -76,7 +90,9 @@ func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []Fi
 		}
 		if v.IsDir() {
 			f.Type = FileDir
-			f.Name += "/"
+			if !strings.HasSuffix(f.Name, "/") {
+				f.Name += "/"
+			}
 		}
 
 		data[i] = f
