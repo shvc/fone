@@ -35,20 +35,14 @@ var transport http.RoundTripper = &http.Transport{
 	},
 }
 
-type Client struct {
-	Bucket string
-	Prefix string
-	c      *s3.Client
-}
-
-func NewClientWithBucket(bucket, prefix, accessKey, secretKey, region, endpoint string) *Client {
+func NewClientWithBucket(bucket, prefix, accessKey, secretKey, region, endpoint string) *S3Client {
 	c := NewClient(accessKey, secretKey, region, endpoint)
 	c.Bucket = bucket
 	c.Prefix = prefix
 	return c
 }
 
-func NewClient(accessKey, secretKey, region, endpoint string) *Client {
+func NewClient(accessKey, secretKey, region, endpoint string) *S3Client {
 	awsConfig := aws.Config{
 		Region:        region,
 		ClientLogMode: 0,
@@ -82,12 +76,18 @@ func NewClient(accessKey, secretKey, region, endpoint string) *Client {
 		opts.UsePathStyle = true
 	})
 
-	return &Client{
+	return &S3Client{
 		c: client,
 	}
 }
 
-func (c *Client) ListBuckets(ctx context.Context) (data []string, err error) {
+type S3Client struct {
+	Bucket string
+	Prefix string
+	c      *s3.Client
+}
+
+func (c *S3Client) ListBuckets(ctx context.Context) (data []string, err error) {
 	log.WithFields(log.Fields{}).Debug("s3 list buckets")
 
 	s3out, err := c.c.ListBuckets(ctx, &s3.ListBucketsInput{})
@@ -103,7 +103,7 @@ func (c *Client) ListBuckets(ctx context.Context) (data []string, err error) {
 	return
 }
 
-func (c *Client) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
+func (c *S3Client) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
 	log.WithFields(log.Fields{
 		"marker": marker,
 		"prefix": prefix,
@@ -163,7 +163,7 @@ func (c *Client) List(ctx context.Context, prefix, marker string) (data []File, 
 	return
 }
 
-func (c *Client) Upload(ctx context.Context, rs io.ReadSeeker, key, contentType string) (err error) {
+func (c *S3Client) Upload(ctx context.Context, rs io.ReadSeeker, key, contentType string) (err error) {
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
@@ -183,7 +183,7 @@ func (c *Client) Upload(ctx context.Context, rs io.ReadSeeker, key, contentType 
 	return
 }
 
-func (c *Client) Download(ctx context.Context, w io.Writer, key string) (err error) {
+func (c *S3Client) Download(ctx context.Context, w io.Writer, key string) (err error) {
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
@@ -200,7 +200,7 @@ func (c *Client) Download(ctx context.Context, w io.Writer, key string) (err err
 	return
 }
 
-func (c *Client) Delete(ctx context.Context, key string) (err error) {
+func (c *S3Client) Delete(ctx context.Context, key string) (err error) {
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
@@ -212,7 +212,7 @@ func (c *Client) Delete(ctx context.Context, key string) (err error) {
 	return
 }
 
-func (c *Client) Head(ctx context.Context, key string) (f File, err error) {
+func (c *S3Client) Stat(ctx context.Context, key string) (f File, err error) {
 	if c.Prefix != "" {
 		key = c.Prefix + key
 	}
@@ -229,4 +229,8 @@ func (c *Client) Head(ctx context.Context, key string) (f File, err error) {
 	f.Time = *resp.LastModified
 
 	return
+}
+
+func (c *S3Client) Close(ctx context.Context) error {
+	return nil
 }

@@ -7,7 +7,9 @@ require (
 	fyne.io/fyne/v2 v2.1.4
 	github.com/aws/aws-sdk-go-v2 v1.16.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.10
+	github.com/pkg/sftp v1.13.4
 	github.com/sirupsen/logrus v1.8.1
+	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 )
 
 require (
@@ -27,6 +29,7 @@ require (
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20220320163800-277f93cfa958 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/goki/freetype v0.0.0-20220119013949-7a161fd3728c // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/srwiley/oksvg v0.0.0-20220128195007-1f435e4c2b44 // indirect
 	github.com/srwiley/rasterx v0.0.0-20220128185129-2efea2b9ea41 // indirect
