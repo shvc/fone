@@ -1,5 +1,5 @@
 # fone
-fone is a simple S3 Browser based on [fyne](https://github.com/fyne-io/fyne)
+fone is a simple S3/sftp Browser based on [fyne](https://github.com/fyne-io/fyne)
 
 # Install
 - Download prebuild [binary](https://github.com/shvc/fone/releases)
