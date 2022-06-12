@@ -30,11 +30,11 @@ FYNE_FONT='/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
 ```
 
 ## ScreenShot
-- Windows login
+- Windows login  
 ![Win-login](screenshot/win-login.png)
-- Windows File Browser
+- Windows File Browser  
 ![Win-file](screenshot/win-file.png)
-- MacOS login
+- MacOS login  
 ![MacOS-login](screenshot/macos-login.png)
-- Ubuntu login
+- Ubuntu login  
 ![Ubuntu-login](screenshot/ubuntu-login.png)
