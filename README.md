@@ -7,9 +7,12 @@ fone is a simple S3/sftp Browser based on [fyne](https://github.com/fyne-io/fyne
 ```
 git clone https://github.com/shvc/fone
 
-go get github.com/fyne-io/fyne-cross
+go install github.com/fyne-io/fyne-cross
 
 fyne-cross windows -env GOPROXY=https://goproxy.cn
+fyne-cross linux -env GOPROXY=https://goproxy.cn
+fyne-cross macos -env GOPROXY=https://goproxy.cn
+fyne-cross android -env GOPROXY=https://goproxy.cn
 ```
 
 # Set Font to resolv garbled issue
