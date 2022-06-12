@@ -10,9 +10,8 @@ git clone https://github.com/shvc/fone
 go install github.com/fyne-io/fyne-cross
 
 fyne-cross windows -env GOPROXY=https://goproxy.cn
-fyne-cross linux -env GOPROXY=https://goproxy.cn
-fyne-cross macos -env GOPROXY=https://goproxy.cn
-fyne-cross android -env GOPROXY=https://goproxy.cn
+fyne-cross linux -release -env GOPROXY=https://goproxy.cn
+fyne-cross android -release -env GOPROXY=https://goproxy.cn
 ```
 
 # Set Font to resolv garbled issue
@@ -29,3 +28,9 @@ FYNE_FONT=C:\Windows\Fonts\Microsoft YaHei Mono.ttf
 ```
 FYNE_FONT='/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
 ```
+
+## ScreenShot
+![Win-login](screenshot/win-login.png)
+![Win-file](screenshot/win-file.png)
+![MacOS-login](screenshot/macos-login.png)
+![Ubuntu-login](screenshot/ubuntu-login.png)
