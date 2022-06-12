@@ -488,8 +488,6 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 	pass := widget.NewPasswordEntry()
 	pass.Bind(binding.BindPreferenceString("cred.s3_pass", sc.a.Preferences()))
 
-	sc.w.SetTitle("S3")
-
 	return &widget.Form{
 		Items: []*widget.FormItem{
 			widget.NewFormItem("Endpoint", endpoint),
@@ -500,9 +498,9 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 		},
 		SubmitText: "Enter",
 		OnSubmit: func() {
+			sc.w.SetTitle("S3")
 			if bucketEntry.Text != "" {
 				bucketName, keyPrefix := splitKeyValue(bucketEntry.Text, "/")
-
 				sc.client = NewClientWithBucket(bucketName, keyPrefix, user.Text, pass.Text, region.Text, endpoint.Text)
 				sc.lockRefresh()
 				data, nextMarker, err := sc.client.List(context.Background(), "", "")
@@ -575,8 +573,6 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 	sftpPassword := widget.NewPasswordEntry()
 	sftpPassword.Bind(binding.BindPreferenceString("cred.sftp_password", sc.a.Preferences()))
 
-	sc.w.SetTitle("sftp")
-
 	return &widget.Form{
 		Items: []*widget.FormItem{
 			widget.NewFormItem("Server", server),
@@ -588,6 +584,7 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 		OnSubmit: func() {
 			var err error
 			var pwd string
+			sc.w.SetTitle("sftp")
 			sc.client, pwd, err = NewSftpClient(server.Text, sftpUser.Text, sftpPassword.Text, remoteDir.Text)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -651,8 +648,6 @@ func (sc *Fone) createMyshareLoginForm() *widget.Form {
 	pass := widget.NewPasswordEntry()
 	pass.Bind(binding.BindPreferenceString("cred.myshare_pass", sc.a.Preferences()))
 
-	sc.w.SetTitle("myshare")
-
 	return &widget.Form{
 		Items: []*widget.FormItem{
 			widget.NewFormItem("Server", server),
@@ -662,6 +657,7 @@ func (sc *Fone) createMyshareLoginForm() *widget.Form {
 		},
 		SubmitText: "Enter",
 		OnSubmit: func() {
+			sc.w.SetTitle("myshare")
 			if bucketEntry.Text != "" {
 				var err error
 				sc.client, _, err = NewMystorClient(server.Text, user.Text, pass.Text, bucketEntry.Text)
