@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/pkg/sftp"
 	log "github.com/sirupsen/logrus"
@@ -17,7 +18,8 @@ func NewSftpClient(server, user, pass, dir string) (*SftpClient, string, error) 
 	}
 
 	config := &ssh.ClientConfig{
-		User: user,
+		Timeout: 10 * time.Second,
+		User:    user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(pass),
 			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {

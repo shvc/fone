@@ -22,7 +22,7 @@ const (
 var transport http.RoundTripper = &http.Transport{
 	Proxy: http.ProxyFromEnvironment,
 	Dial: (&net.Dialer{
-		Timeout:   15 * time.Second,
+		Timeout:   10 * time.Second,
 		KeepAlive: 30 * time.Second,
 	}).Dial,
 	TLSHandshakeTimeout:   10 * time.Second,
