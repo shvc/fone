@@ -4,25 +4,25 @@ go 1.19
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
-	fyne.io/fyne/v2 v2.2.2
-	github.com/aws/aws-sdk-go-v2 v1.16.6
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.12
+	fyne.io/fyne/v2 v2.2.3
+	github.com/aws/aws-sdk-go-v2 v1.17.1
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.1
 	github.com/pkg/sftp v1.13.5
-	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+	github.com/sirupsen/logrus v1.9.0
+	golang.org/x/crypto v0.1.0
 )
 
 require (
 	fyne.io/systray v1.10.1-0.20220621085403-9a2652634e93 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.7 // indirect
-	github.com/aws/smithy-go v1.12.0 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.16 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.20 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.19 // indirect
+	github.com/aws/smithy-go v1.13.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v0.0.0-20181227131451-3dcfdacbaaf3 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
@@ -44,9 +44,9 @@ require (
 	github.com/yuin/goldmark v1.4.11 // indirect
 	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd // indirect
 	golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect
 )
