@@ -49,11 +49,11 @@ func NewClient(accessKey, secretKey, region, endpoint string) *S3Client {
 		HTTPClient: &http.Client{
 			Transport: transport,
 		},
-		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, region string, opts ...interface{}) (aws.Endpoint, error) {
+		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, rg string, opts ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
 				URL:           endpoint,
 				SigningName:   "s3",
-				SigningRegion: region,
+				SigningRegion: rg,
 			}, nil
 		}),
 		Retryer: func() aws.Retryer {
