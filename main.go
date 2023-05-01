@@ -160,6 +160,8 @@ func (sc *Fone) makeHeader() error {
 				if ok {
 					sc.w.SetContent(sc.appTab)
 					sc.w.Resize(fyne.NewSize(600, 300))
+					sc.selectFile.Name = ""
+					sc.selectItemID = -1
 					log.WithFields(log.Fields{
 						"pwd": "sc.bucketEntry.Text",
 					}).Info("exit session")
@@ -241,7 +243,7 @@ func (sc *Fone) makeFooter() error {
 	var downloadCtx context.Context
 	var downloadCancel context.CancelFunc
 	btnDownload = widget.NewButtonWithIcon("", theme.DownloadIcon(), func() {
-		if btnDownload.Icon.Name() != "download.svg" {
+		if btnDownload.Icon.Name() != "foreground_download.svg" {
 			d := dialog.NewConfirm("Cancel", "Cancel Downloading?", func(b bool) {
 				if b && downloadCancel != nil {
 					downloadCancel()
@@ -286,6 +288,7 @@ func (sc *Fone) makeFooter() error {
 					showLableMsg(sc.infoLabel, err.Error())
 					return
 				}
+
 				log.WithFields(log.Fields{
 					"key":  key,
 					"file": uc.URI().String(),
@@ -302,7 +305,7 @@ func (sc *Fone) makeFooter() error {
 	var uploadCtx context.Context
 	var uploadCancel context.CancelFunc
 	btnUpload = widget.NewButtonWithIcon("", theme.UploadIcon(), func() {
-		if btnUpload.Icon.Name() != "upload.svg" {
+		if btnUpload.Icon.Name() != "foreground_upload.svg" {
 			d := dialog.NewConfirm("Cancel", "Cancel Uploading?", func(b bool) {
 				if b && downloadCancel != nil {
 					uploadCancel()

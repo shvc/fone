@@ -123,7 +123,9 @@ func (fl *FileList) Clear() {
 }
 
 func (fl *FileList) Delete(id int) {
-	fl.data = append(fl.data[0:id], fl.data[id+1:]...)
+	if id < len(fl.data)+1 && len(fl.data) > 0 && id > 0 {
+		fl.data = append(fl.data[0:id], fl.data[id+1:]...)
+	}
 	fl.Refresh()
 	fl.UnselectAll()
 }
