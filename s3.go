@@ -145,14 +145,15 @@ func (c *S3Client) List(ctx context.Context, prefix, marker string) (data []File
 		f := File{
 			Name: *v.Key,
 			Time: *v.LastModified,
-			Size: v.Size,
+			Size: *v.Size,
 		}
 		if prefix != "" {
 			f.Name = strings.TrimPrefix(f.Name, prefix)
 		}
 		data[lp+i] = f
 	}
-	if s3out.IsTruncated {
+
+	if *s3out.IsTruncated {
 		if s3out.NextMarker != nil && *s3out.NextMarker != "" {
 			nextMarker = *s3out.NextMarker
 		} else {
@@ -224,7 +225,7 @@ func (c *S3Client) Stat(ctx context.Context, key string) (f File, err error) {
 		return
 	}
 	f.Name = key
-	f.Size = resp.ContentLength
+	f.Size = *resp.ContentLength
 	f.ContentType = *resp.ContentType
 	f.Time = *resp.LastModified
 
