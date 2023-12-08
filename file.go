@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -150,12 +150,11 @@ func (fl *FileList) SelectFile(id int) (v File) {
 		return
 	}
 	v = fl.data[id]
-
-	log.WithFields(log.Fields{
-		"id":     id,
-		"name":   v.Name,
-		"parent": fl.parent,
-	}).Debug("select file")
+	slog.Debug("select file",
+		slog.Int("id", id),
+		slog.String("name", v.Name),
+		slog.String("parent", fl.parent),
+	)
 
 	return
 }

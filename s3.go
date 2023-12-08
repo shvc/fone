@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -88,7 +88,7 @@ type S3Client struct {
 }
 
 func (c *S3Client) ListAllMyBuckets(ctx context.Context) (data []string, err error) {
-	log.WithFields(log.Fields{}).Debug("s3 list buckets")
+	slog.Debug("s3 list buckets")
 
 	s3out, err := c.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
@@ -104,10 +104,10 @@ func (c *S3Client) ListAllMyBuckets(ctx context.Context) (data []string, err err
 }
 
 func (c *S3Client) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
-	log.WithFields(log.Fields{
-		"marker": marker,
-		"prefix": prefix,
-	}).Debug("s3 list")
+	slog.Debug("s3 list",
+		slog.String("marker", marker),
+		slog.String("prefix", prefix),
+	)
 	loi := &s3.ListObjectsInput{
 		Bucket:    aws.String(c.Bucket),
 		Delimiter: aws.String(listDelimiter),

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -69,10 +69,10 @@ type SftpClient struct {
 }
 
 func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
-	log.WithFields(log.Fields{
-		"marker": marker,
-		"prefix": prefix,
-	}).Debug("s3 list")
+	slog.Debug("s3 list",
+		slog.String("marker", marker),
+		slog.String("prefix", prefix),
+	)
 	if prefix == "" {
 		prefix = c.Pwd
 	}

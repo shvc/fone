@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
@@ -21,7 +22,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -120,11 +120,11 @@ func (sc *Fone) makeHeader() error {
 			prefix := sc.pathLabel.Text
 			data, nextMarker, err := sc.client.List(sc.refreshCtx, prefix, "")
 			if err != nil {
-				log.WithFields(log.Fields{
-					"marker": "",
-					"prefix": prefix,
-					"error":  err.Error(),
-				}).Warn("refresh failed")
+				slog.Warn("refresh failed",
+					slog.String("marker", ""),
+					slog.String("prefix", prefix),
+					slog.String("error", err.Error()),
+				)
 				sc.unlockRefresh()
 				showLableMsg(sc.infoLabel, err.Error())
 				return
@@ -140,15 +140,15 @@ func (sc *Fone) makeHeader() error {
 	bucketItem := fyne.NewMenuItem("Bucket", nil)
 	bucketItem.ChildMenu = fyne.NewMenu("",
 		fyne.NewMenuItem("Policy", func() {
-			log.Info("Bucket Policy")
+			slog.Info("Bucket Policy")
 		}),
 		fyne.NewMenuItem("Versioning", func() {
-			log.Info("Bucket Versioning")
+			slog.Info("Bucket Versioning")
 		}),
 	)
 	link, err := url.Parse(shvcFone)
 	if err != nil {
-		log.Warn("Could not parse URL", err)
+		slog.Warn("Could not parse URL", err)
 	}
 	menuLabel := buttonMenu(theme.MenuIcon(), fyne.NewMenu("",
 		bucketItem,
@@ -162,9 +162,9 @@ func (sc *Fone) makeHeader() error {
 					sc.w.Resize(fyne.NewSize(600, 300))
 					sc.selectFile.Name = ""
 					sc.selectItemID = -1
-					log.WithFields(log.Fields{
-						"pwd": "sc.bucketEntry.Text",
-					}).Info("exit session")
+					slog.Info("exit session",
+						slog.String("pwd", sc.pathLabel.Text),
+					)
 				}
 			}, sc.w).Show()
 		}),
@@ -204,11 +204,11 @@ func (sc *Fone) makeHeader() error {
 			}
 			data, nextMarker, err := sc.client.List(sc.refreshCtx, prefix, "")
 			if err != nil {
-				log.WithFields(log.Fields{
-					"marker": "",
-					"prefix": prefix,
-					"error":  err.Error(),
-				}).Warn("refresh failed")
+				slog.Warn("refresh failed",
+					slog.String("marker", ""),
+					slog.String("prefix", prefix),
+					slog.String("error", err.Error()),
+				)
 				sc.unlockRefresh()
 				showLableMsg(sc.infoLabel, err.Error())
 				return
@@ -258,14 +258,14 @@ func (sc *Fone) makeFooter() error {
 		}
 		d := dialog.NewFileSave(func(uc fyne.URIWriteCloser, e error) {
 			if e != nil {
-				log.WithFields(log.Fields{
-					"error": e.Error(),
-				}).Warn("download select file failed")
+				slog.Warn("download select file failed",
+					slog.String("error", e.Error()),
+				)
 				btnDownload.SetIcon(theme.DownloadIcon())
 				return
 			}
 			if uc == nil {
-				log.Warn("download select file nil")
+				slog.Warn("download select file nil")
 				btnDownload.SetIcon(theme.DownloadIcon())
 				return
 			}
@@ -281,18 +281,18 @@ func (sc *Fone) makeFooter() error {
 
 				err := sc.client.Download(downloadCtx, uc, key)
 				if err != nil {
-					log.WithFields(log.Fields{
-						"key":   key,
-						"error": err.Error(),
-					}).Warn("download failed")
+					slog.Warn("download failed",
+						slog.String("key", key),
+						slog.String("error", err.Error()),
+					)
 					showLableMsg(sc.infoLabel, err.Error())
 					return
 				}
 
-				log.WithFields(log.Fields{
-					"key":  key,
-					"file": uc.URI().String(),
-				}).Info("download success")
+				slog.Info("download success",
+					slog.String("key", key),
+					slog.String("file", uc.URI().String()),
+				)
 			}()
 		}, sc.w)
 		d.SetFileName(path.Base(sc.selectFile.Name))
@@ -316,9 +316,9 @@ func (sc *Fone) makeFooter() error {
 		}
 		d := dialog.NewFileOpen(func(uc fyne.URIReadCloser, e error) {
 			if e != nil {
-				log.WithFields(log.Fields{
-					"error": e.Error(),
-				}).Warn("upload select file failed")
+				slog.Warn("upload select file failed",
+					slog.String("error", e.Error()),
+				)
 				dialog.NewError(e, sc.w).Show()
 				btnUpload.SetIcon(theme.UploadIcon())
 				return
@@ -350,19 +350,19 @@ func (sc *Fone) makeFooter() error {
 				}
 				err := sc.client.Upload(uploadCtx, rs, key, uc.URI().MimeType())
 				if err != nil {
-					log.WithFields(log.Fields{
-						"key":   key,
-						"file":  fullName,
-						"error": err.Error(),
-					}).Warn("upload failed")
+					slog.Warn("upload failed",
+						slog.String("key", key),
+						slog.String("file", fullName),
+						slog.String("error", err.Error()),
+					)
 					dialog.NewError(err, sc.w).Show()
 					return
 				}
 
-				log.WithFields(log.Fields{
-					"key":  key,
-					"file": fullName,
-				}).Info("upload success")
+				slog.Warn("upload success",
+					slog.String("key", key),
+					slog.String("file", fullName),
+				)
 
 				sc.body.Add(File{
 					Name: filename,
@@ -384,16 +384,16 @@ func (sc *Fone) makeFooter() error {
 		key := path.Join(sc.pathLabel.Text, sc.selectFile.Name)
 		e := sc.client.Delete(context.TODO(), key)
 		if e != nil {
-			log.WithFields(log.Fields{
-				"key":   key,
-				"error": e.Error(),
-			}).Warn("delete failed")
+			slog.Warn("delete failed",
+				slog.String("key", key),
+				slog.String("error", e.Error()),
+			)
 			return
 		}
 		sc.body.Delete(sc.selectItemID)
-		log.WithFields(log.Fields{
-			"key": key,
-		}).Info("delete success")
+		slog.Info("delete success",
+			slog.String("key", key),
+		)
 	})
 	btnDelete.Importance = widget.LowImportance
 
@@ -420,21 +420,21 @@ func (sc *Fone) makeFooter() error {
 
 // Must lockRefresh
 func (sc *Fone) appendBody(ctx context.Context, prefix, marker string) {
-	log.WithFields(log.Fields{
-		"prefix": prefix,
-		"marker": marker,
-	}).Debug("more list")
+	slog.Debug("more list",
+		slog.String("prefix", prefix),
+		slog.String("marker", marker),
+	)
 	go func() {
 		defer sc.unlockRefresh()
 		data := []File{}
 		for marker != "" {
 			d, m, err := sc.client.List(ctx, prefix, marker)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"prefix": prefix,
-					"marker": marker,
-					"err":    err.Error(),
-				}).Error("more list failed")
+				slog.Error("more list failed",
+					slog.String("prefix", prefix),
+					slog.String("marker", marker),
+					slog.String("error", err.Error()),
+				)
 				break
 			}
 			marker = m
@@ -508,12 +508,12 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 				sc.lockRefresh()
 				data, nextMarker, err := sc.client.List(context.Background(), "", "")
 				if err != nil {
-					log.WithFields(log.Fields{
-						"endpoint": endpoint.Text,
-						"bucket":   bucketEntry.Text,
-						"user":     user.Text,
-						"error":    err.Error(),
-					}).Warn("list file failed")
+					slog.Warn("list file failed",
+						slog.String("endpoint", endpoint.Text),
+						slog.String("bucket", bucketEntry.Text),
+						slog.String("user", user.Text),
+						slog.String("error", err.Error()),
+					)
 					var e error
 					for err != nil {
 						e = err
@@ -522,11 +522,11 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 					dialog.ShowError(e, sc.w)
 					return
 				}
-				log.WithFields(log.Fields{
-					"endpoint": endpoint.Text,
-					"bucket":   bucketEntry.Text,
-					"user":     user.Text,
-				}).Info("list file success")
+				slog.Info("list file success",
+					slog.String("endpoint", endpoint.Text),
+					slog.String("bucket", bucketEntry.Text),
+					slog.String("user", user.Text),
+				)
 
 				sc.makeHeader()
 				sc.initBody(data)
@@ -542,11 +542,11 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 				client := NewClient(user.Text, pass.Text, region.Text, endpoint.Text)
 				data, err := client.ListAllMyBuckets(context.Background())
 				if err != nil {
-					log.WithFields(log.Fields{
-						"endpoint": endpoint.Text,
-						"user":     user.Text,
-						"error":    err.Error(),
-					}).Warn("list buckets failed")
+					slog.Warn("list buckets failed",
+						slog.String("endpoint", endpoint.Text),
+						slog.String("user", user.Text),
+						slog.String("error", err.Error()),
+					)
 					var e error
 					for err != nil {
 						e = err
@@ -555,10 +555,11 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 					dialog.ShowError(e, sc.w)
 					return
 				}
-				log.WithFields(log.Fields{
-					"endpoint": endpoint.Text,
-					"user":     user.Text,
-				}).Info("list buckets success")
+
+				slog.Info("list buckets success",
+					slog.String("endpoint", endpoint.Text),
+					slog.String("user", user.Text),
+				)
 				if len(data) > 0 {
 					bucketEntry.SetOptions(data)
 					bucketEntry.SetText(data[0])
@@ -590,24 +591,24 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 			sc.w.SetTitle("sftp")
 			sc.client, pwd, err = NewSftpClient(server.Text, sftpUser.Text, sftpPassword.Text, remoteDir.Text)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"server": server.Text,
-					"pwd":    pwd,
-					"user":   sftpUser.Text,
-					"error":  err.Error(),
-				}).Warn("init provider failed")
+				slog.Warn("init provider failed",
+					slog.String("server", server.Text),
+					slog.String("pwd", pwd),
+					slog.String("user", sftpUser.Text),
+					slog.String("error", err.Error()),
+				)
 				return
 			}
 
 			sc.lockRefresh()
 			data, nextMarker, err := sc.client.List(context.Background(), pwd, "")
 			if err != nil {
-				log.WithFields(log.Fields{
-					"server": server.Text,
-					"pwd":    pwd,
-					"user":   sftpUser.Text,
-					"error":  err.Error(),
-				}).Warn("list file failed")
+				slog.Warn("list file failed",
+					slog.String("server", server.Text),
+					slog.String("pwd", pwd),
+					slog.String("user", sftpUser.Text),
+					slog.String("error", err.Error()),
+				)
 				var e error
 				for err != nil {
 					e = err
@@ -617,11 +618,11 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 				return
 			}
 
-			log.WithFields(log.Fields{
-				"server": server.Text,
-				"pwd":    pwd,
-				"user":   sftpUser.Text,
-			}).Info("list file success")
+			slog.Info("list file success",
+				slog.String("server", server.Text),
+				slog.String("pwd", pwd),
+				slog.String("user", sftpUser.Text),
+			)
 
 			sc.makeHeader()
 			sc.initBody(data)
@@ -641,120 +642,6 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 	}
 }
 
-func (sc *Fone) createMyshareLoginForm() *widget.Form {
-	server := widget.NewEntryWithData(binding.BindPreferenceString("cred.myshare_server", sc.a.Preferences()))
-	server.SetPlaceHolder("http://192.168.0.8:9090")
-	server.Validator = validation.NewRegexp(`^(?:https?://)?(?:[^/.\s]+\.)*`, "not a valid server address")
-	bucketEntry := widget.NewSelectEntry(nil)
-	bucketEntry.Bind(binding.BindPreferenceString("cred.myshare_bucket", sc.a.Preferences()))
-	user := widget.NewEntryWithData(binding.BindPreferenceString("cred.myshare_user", sc.a.Preferences()))
-	pass := widget.NewPasswordEntry()
-	pass.Bind(binding.BindPreferenceString("cred.myshare_pass", sc.a.Preferences()))
-
-	return &widget.Form{
-		Items: []*widget.FormItem{
-			widget.NewFormItem("Server", server),
-			widget.NewFormItem("AccessKey", user),
-			widget.NewFormItem("SecretKey", pass),
-			widget.NewFormItem("Bucket", bucketEntry),
-		},
-		SubmitText: "Enter",
-		OnSubmit: func() {
-			sc.w.SetTitle("myshare")
-			if bucketEntry.Text != "" {
-				var err error
-				sc.client, _, err = NewMystorClient(server.Text, user.Text, pass.Text, bucketEntry.Text)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"endpoint": server.Text,
-						"user":     user.Text,
-						"error":    err.Error(),
-					}).Warn("create client failed")
-					var e error
-					for err != nil {
-						e = err
-						err = errors.Unwrap(err)
-					}
-					dialog.ShowError(e, sc.w)
-					return
-				}
-				sc.lockRefresh()
-				data, nextMarker, err := sc.client.List(context.Background(), "", "")
-				if err != nil {
-					log.WithFields(log.Fields{
-						"server": server.Text,
-						"bucket": bucketEntry.Text,
-						"user":   user.Text,
-						"error":  err.Error(),
-					}).Warn("list file failed")
-					var e error
-					for err != nil {
-						e = err
-						err = errors.Unwrap(err)
-					}
-					dialog.ShowError(e, sc.w)
-					return
-				}
-				log.WithFields(log.Fields{
-					"server": server.Text,
-					"bucket": bucketEntry.Text,
-					"user":   user.Text,
-				}).Info("list file success")
-
-				sc.makeHeader()
-				sc.initBody(data)
-				sc.makeFooter()
-
-				sc.refreshCtx, sc.refreshCancel = context.WithCancel(context.Background())
-				sc.lockRefresh()
-				sc.appendBody(sc.refreshCtx, "", nextMarker)
-
-				sc.w.SetContent(container.NewBorder(sc.header, sc.footer, nil, nil, sc.body))
-				sc.w.Resize(fyne.NewSize(800, 600))
-			} else {
-				client, _, err := NewMystorClient(server.Text, user.Text, pass.Text, bucketEntry.Text)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"endpoint": server.Text,
-						"user":     user.Text,
-						"error":    err.Error(),
-					}).Warn("create client failed")
-					var e error
-					for err != nil {
-						e = err
-						err = errors.Unwrap(err)
-					}
-					dialog.ShowError(e, sc.w)
-					return
-				}
-				data, err := client.ListAllMyBuckets(context.Background())
-				if err != nil {
-					log.WithFields(log.Fields{
-						"endpoint": server.Text,
-						"user":     user.Text,
-						"error":    err.Error(),
-					}).Warn("list buckets failed")
-					var e error
-					for err != nil {
-						e = err
-						err = errors.Unwrap(err)
-					}
-					dialog.ShowError(e, sc.w)
-					return
-				}
-				log.WithFields(log.Fields{
-					"server": server.Text,
-					"user":   user.Text,
-				}).Info("list buckets success")
-				if len(data) > 0 {
-					bucketEntry.SetOptions(data)
-					bucketEntry.SetText(data[0])
-				}
-			}
-		},
-	}
-}
-
 func main() {
 	var logfile string
 	var debug bool
@@ -766,11 +653,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	logOpt := &slog.HandlerOptions{}
 	if debug {
-		log.SetLevel(log.DebugLevel)
+		logOpt.Level = slog.LevelDebug
 	}
-	log.SetOutput(logfd)
+	slog.SetDefault(slog.New(slog.NewTextHandler(logfd, logOpt)))
 
 	fe := Fone{
 		a: app.NewWithID("cc.shvc.fone"),
@@ -780,7 +667,6 @@ func main() {
 	fe.appTab = container.NewAppTabs(
 		container.NewTabItemWithIcon("S3", theme.FileIcon(), fe.createS3LoginForm()),
 		container.NewTabItemWithIcon("sftp", theme.FolderIcon(), fe.createSftpLoginForm()),
-		container.NewTabItemWithIcon("myshare", theme.DocumentIcon(), fe.createMyshareLoginForm()),
 	)
 
 	fe.w.SetContent(fe.appTab)

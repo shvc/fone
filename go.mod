@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.23.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.3
 	github.com/pkg/sftp v1.13.6
-	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.16.0
 )
 
