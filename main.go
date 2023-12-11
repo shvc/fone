@@ -148,7 +148,10 @@ func (sc *Fone) makeHeader() error {
 	)
 	link, err := url.Parse(shvcFone)
 	if err != nil {
-		slog.Warn("Could not parse URL", err)
+		slog.Warn("Could not parse URL",
+			slog.String("url", shvcFone),
+			slog.String("error", err.Error()),
+		)
 	}
 	menuLabel := buttonMenu(theme.MenuIcon(), fyne.NewMenu("",
 		bucketItem,
@@ -359,7 +362,7 @@ func (sc *Fone) makeFooter() error {
 					return
 				}
 
-				slog.Warn("upload success",
+				slog.Info("upload success",
 					slog.String("key", key),
 					slog.String("file", fullName),
 				)
