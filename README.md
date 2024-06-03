@@ -2,7 +2,7 @@
 fone is a simple S3/sftp Browser based on [fyne](https://github.com/fyne-io/fyne)
 
 # Install
-- Download prebuild [binary](https://github.com/shvc/fone/releases)
+- Download prebuilt [binary](https://github.com/shvc/fone/releases)
 - Or build from source
 ```
 git clone https://github.com/shvc/fone
@@ -14,7 +14,7 @@ fyne-cross linux -release -env GOPROXY=https://goproxy.cn
 fyne-cross android -release -env GOPROXY=https://goproxy.cn
 ```
 
-# Set Font to resolv garbled issue
+# Set Font to resolve garbled issue
 - MacOS Font ENV
 ```
 export FYNE_FONT='/System/Library/Fonts/STHeiti Light.ttc'
