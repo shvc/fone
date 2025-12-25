@@ -69,7 +69,7 @@ type SftpClient struct {
 }
 
 func (c *SftpClient) List(ctx context.Context, prefix, marker string) (data []File, nextMarker string, err error) {
-	slog.Debug("s3 list",
+	slog.Debug("sftp list",
 		slog.String("marker", marker),
 		slog.String("prefix", prefix),
 	)

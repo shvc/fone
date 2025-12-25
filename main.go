@@ -81,12 +81,28 @@ func splitKeyValue(data, sep string) (string, string) {
 	return data, ""
 }
 
-func showLableMsg(l *widget.Label, msg string) {
-	// handle UTF8 ?
-	if msgLen := len(msg); msgLen > 69 {
-		msg = msg[:42] + " ... " + msg[msgLen-21:]
+func showLabelMsg(l *widget.Label, msg string) {
+	const (
+		maxMsgLength      = 69
+		truncatePrefixLen = 42
+		truncateSuffixLen = 21
+	)
+	if msgLen := len(msg); msgLen > maxMsgLength {
+		msg = msg[:truncatePrefixLen] + " ... " + msg[msgLen-truncateSuffixLen:]
 	}
 	l.SetText(msg)
+}
+
+// unwrapError returns the root cause of an error by unwrapping it
+func unwrapError(err error) error {
+	for err != nil {
+		nextErr := errors.Unwrap(err)
+		if nextErr == nil {
+			return err
+		}
+		err = nextErr
+	}
+	return nil
 }
 
 func (sc *Fone) lockRefresh() {
@@ -126,7 +142,7 @@ func (sc *Fone) makeHeader() error {
 					slog.String("error", err.Error()),
 				)
 				sc.unlockRefresh()
-				showLableMsg(sc.infoLabel, err.Error())
+				showLabelMsg(sc.infoLabel, err.Error())
 				return
 			}
 			sc.infoLabel.SetText("")
@@ -213,7 +229,7 @@ func (sc *Fone) makeHeader() error {
 					slog.String("error", err.Error()),
 				)
 				sc.unlockRefresh()
-				showLableMsg(sc.infoLabel, err.Error())
+				showLabelMsg(sc.infoLabel, err.Error())
 				return
 			}
 			sc.infoLabel.SetText("")
@@ -288,7 +304,7 @@ func (sc *Fone) makeFooter() error {
 						slog.String("key", key),
 						slog.String("error", err.Error()),
 					)
-					showLableMsg(sc.infoLabel, err.Error())
+					showLabelMsg(sc.infoLabel, err.Error())
 					return
 				}
 
@@ -310,7 +326,7 @@ func (sc *Fone) makeFooter() error {
 	btnUpload = widget.NewButtonWithIcon("", theme.UploadIcon(), func() {
 		if btnUpload.Icon.Name() != "foreground_upload.svg" {
 			d := dialog.NewConfirm("Cancel", "Cancel Uploading?", func(b bool) {
-				if b && downloadCancel != nil {
+				if b && uploadCancel != nil {
 					uploadCancel()
 				}
 			}, sc.w)
@@ -453,7 +469,7 @@ func (sc *Fone) initBody(data []File) {
 		sc.selectItemID = i
 		sc.selectFile = sc.body.SelectFile(i)
 		if !sc.selectFile.IsDir() {
-			showLableMsg(sc.infoLabel, sc.selectFile.Info())
+			showLabelMsg(sc.infoLabel, sc.selectFile.Info())
 			return
 		}
 
@@ -473,7 +489,7 @@ func (sc *Fone) initBody(data []File) {
 		data, nextMarker, err := sc.client.List(sc.refreshCtx, prefix, "")
 		if err != nil {
 			sc.unlockRefresh()
-			showLableMsg(sc.infoLabel, "Error:"+err.Error())
+			showLabelMsg(sc.infoLabel, "Error:"+err.Error())
 			return
 		}
 		sc.pathLabel.SetText(prefix)
@@ -517,12 +533,7 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 						slog.String("user", user.Text),
 						slog.String("error", err.Error()),
 					)
-					var e error
-					for err != nil {
-						e = err
-						err = errors.Unwrap(err)
-					}
-					dialog.ShowError(e, sc.w)
+					dialog.ShowError(unwrapError(err), sc.w)
 					return
 				}
 				slog.Info("list file success",
@@ -550,12 +561,7 @@ func (sc *Fone) createS3LoginForm() *widget.Form {
 						slog.String("user", user.Text),
 						slog.String("error", err.Error()),
 					)
-					var e error
-					for err != nil {
-						e = err
-						err = errors.Unwrap(err)
-					}
-					dialog.ShowError(e, sc.w)
+					dialog.ShowError(unwrapError(err), sc.w)
 					return
 				}
 
@@ -612,12 +618,7 @@ func (sc *Fone) createSftpLoginForm() *widget.Form {
 					slog.String("user", sftpUser.Text),
 					slog.String("error", err.Error()),
 				)
-				var e error
-				for err != nil {
-					e = err
-					err = errors.Unwrap(err)
-				}
-				dialog.ShowError(e, sc.w)
+				dialog.ShowError(unwrapError(err), sc.w)
 				return
 			}
 

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -21,10 +22,27 @@ const (
 
 var transport http.RoundTripper = &http.Transport{
 	Proxy: http.ProxyFromEnvironment,
-	Dial: (&net.Dialer{
+	DialContext: (&net.Dialer{
 		Timeout:   10 * time.Second,
 		KeepAlive: 30 * time.Second,
-	}).Dial,
+	}).DialContext,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 0,
+	MaxIdleConnsPerHost:   512,
+	MaxIdleConns:          1024,
+	IdleConnTimeout:       5 * time.Minute,
+	// Note: TLS verification is enabled by default for security.
+	// For self-signed certificates in private networks, users can set
+	// the AWS_SKIP_VERIFY environment variable to disable verification.
+}
+
+// insecureTransport is used when AWS_SKIP_VERIFY is set
+var insecureTransport http.RoundTripper = &http.Transport{
+	Proxy: http.ProxyFromEnvironment,
+	DialContext: (&net.Dialer{
+		Timeout:   10 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext,
 	TLSHandshakeTimeout:   10 * time.Second,
 	ExpectContinueTimeout: 0,
 	MaxIdleConnsPerHost:   512,
@@ -43,11 +61,18 @@ func NewClientWithBucket(bucket, prefix, accessKey, secretKey, region, endpoint 
 }
 
 func NewClient(accessKey, secretKey, region, endpoint string) *S3Client {
+	// Use insecure transport only if AWS_SKIP_VERIFY is set
+	transportToUse := transport
+	if os.Getenv("AWS_SKIP_VERIFY") != "" {
+		transportToUse = insecureTransport
+		slog.Warn("using insecure TLS configuration (AWS_SKIP_VERIFY is set)")
+	}
+
 	awsConfig := aws.Config{
 		Region:        region,
 		ClientLogMode: 0,
 		HTTPClient: &http.Client{
-			Transport: transport,
+			Transport: transportToUse,
 		},
 		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(func(service, rg string, opts ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
@@ -118,9 +143,6 @@ func (c *S3Client) List(ctx context.Context, prefix, marker string) (data []File
 	}
 	if marker != "" {
 		loi.Marker = aws.String(marker)
-	}
-	if prefix != "" {
-		loi.Prefix = aws.String(prefix)
 	}
 
 	s3out, err := c.ListObjects(ctx, loi)
